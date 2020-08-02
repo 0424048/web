@@ -1,0 +1,120 @@
+.bus table
+{
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px #000000 none;
+}
+
+.bus td
+{
+    height: 150px;
+    width: 60px;
+    text-align: center;
+}
+
+.car table
+{
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px #000000 none;
+}
+
+.car td
+{
+    height: 90px;
+    width: 40px;
+    text-align: center;
+}
+
+.car td i.ts.icon.empty
+{
+    color: #00FF00
+}
+
+.car td i.ts.icon.full
+{
+    color: #FF0000
+}
+
+.bus td i.ts.icon.empty
+{
+    color: #00FF00
+}
+
+.bus td i.ts.icon.full
+{
+    color: #FF0000
+}
+
+i.ts.icon
+{
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.disable
+{
+    background-color: #00A1F0;
+    font-weight: bold;
+}
+
+.night
+{
+    background-color: #0070C0;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.official
+{
+    background-color: #A20000;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.record.module table
+{
+    margin-left: auto;
+    margin-right: auto;
+    width: 80%;
+}
+
+.power td
+{
+    background-color: #FFFFFF;
+    font-weight: normal;
+    color: #000000;
+}
+
+.power .low
+{
+    background: linear-gradient(to top, #FF0000 12%, transparent 0);
+}
+
+.power .warning
+{
+    background: linear-gradient(to top, #FF8800 37%, transparent 0);
+}
+
+.power .medium
+{
+    background: linear-gradient(to top, #FFFF00 62%, transparent 0);
+}
+
+.power .high
+{
+    background: linear-gradient(to top, #00FF00 87%, transparent 0);
+}
+
+.edit td .ts.close.icon
+{
+    position: absolute;
+    top: 0;
+    right: 0;
+    visibility: hidden;
+}
+
+.edit td:hover>.ts.close.icon
+{
+    visibility: visible;
+}

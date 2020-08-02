@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- Tocas UI：CSS 與元件 -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.css">
+        <!-- Tocas JS：模塊與 JavaScript 函式 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/2.3.3/tocas.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/1.2.0/json2html.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.json2html/1.2.0/jquery.json2html.min.js"></script>
+        <script src="../static/js/main.js"></script>
+        <link rel="stylesheet" href="../static/css/main.css">
+        <link rel="stylesheet" href="../static/css/dateSelect.css">
+        <link href="../static/css/datepicker.min.css" rel="stylesheet" type="text/css">
+        <script src="../static/js/datepicker.min.js"></script>
+        <script src="../static/js/datepicker.en.js"></script>
+        <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+        <title>南仁湖停車場資訊系統</title>
+    </head>
+    <style>
+    .button {
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+    }
+   .container{
+    overflow-x: auto;
+  }
+   .grayButton {
+       background-color: white;
+       color: black;
+       border: 2px solid #e7e7e7;
+    }
+    .grayInput {background-color: #DDDDDD; }
+   .grayButton:active {background-color: #e7e7e7;}
+
+    </style>
+
+    
+    <body style="overflow:scroll;">
+        <div class="ts inverted positive fluid segment">
+            <div class="ts grid">
+                <div class="ts big inverted header" style="margin: 0px auto;">南仁湖停車場資訊系統 </div>
+                <select class="ts dropdown" id="select_site" style="background-color: #79A8B9;color: #fff;border: 1px solid #e9e9e9;z-index: 0">
+                    <option value="湖口休息站(北向)">湖口休息站(北向)</option>
+                    <option value="停車場2">停車場2</option>
+                    <option value="停車場3">停車場3</option>
+                </select>
+                <!--div class="ts big inverted header" style="margin: 0px auto;">測試</div-->
+                <div class="column"></div>
+                <select class="ts basic info dropdown">
+                    <option value="overview">停車格現況</option>
+                    <option value="record">停車紀錄</option>
+
+                    {% if 'isLogin' in session %}
+                        {% if session['isLogin'] %}
+                        <option value="power">停車格裝置電量</option>
+                        <option value="edit">編輯停車格</option>
+                        <option value="report1">各停車場停車次數統計(週)</option>
+                        <option value="report2">停車次數百分比</option>
+                        <option value="report3">停車次數統計表</option>
+                        <option value="report4">停車時間統計表</option>
+                        <option value="report5">停車次數排名表</option>
+                        {% endif %}
+                    {% endif %}
+                </select>
+                <div class="column"></div>
+                <div class="stretched column"></div>
+		{% if 'isLogin' in session and session['isLogin'] %}
+                <button class="ts primary large circular button">已登入</button>
+		{% else %}
+                <button class="ts primary large circular button" onclick="ts('#login').modal('show')">管理者登入</button>
+                {% endif %}
+
+                {% if tryLogin %}
+                    {% if LoginFailed %}
+                        <script>
+                            alert("登入失敗，請檢查帳號及密碼是否輸入正確");
+                        </script>
+                    {% endif %}
+                {% endif %}
+                <div class="ts modals dimmer">
+                    <dialog id="login" class="ts closable mini modal" open>
+                        <i class="ts close icon"></i>
+                        <div class="header">
+                            登入
+                        </div>
+                        <div class="content">
+                            <form class="ts form" action="/login" method="POST">
+                                <div class="field">
+                                    <label>帳號：</label><input type="text" name="account">
+                                </div>
+                                <div class="field">
+                                    <label>密碼：</label><input type="password" name="password">
+                                </div>
+                                <button class="ts positive button" type="submit">登入</button>
+                            </form>
+                        </div>
+                    </dialog>
+                </div>
+            </div>
+        </div>
+    <div class="container">   
+     <div class="overview module active">
+            <div class="ts large attached tabbed menu active" id="TypeList">
+                <a class="active item" data-tab-group="type1" data-tab="car">
+                    <i class="car icon"></i>小客車
+                </a>
+                <a class="item" data-tab-group="type1" data-tab="bus">
+                    <i class="bus icon"></i>大客車
+                </a>
+            </div>
+            
+            
+            <div data-tab-group="type1" data-tab="car" class="ts pointing secondary attached tabbed tab menu active" id="AreaList-1">
+                <!-- <a class="active item" data-tab-group="type1/area" data-tab="A">A區</a> -->
+                <!-- <a class="item" data-tab-group="type1/area" data-tab="B">B區</a> -->
+                <!-- <a class="item" data-tab-group="type1/area" data-tab="C">C區</a> -->
+            </div>
+            <div data-tab-group="type1" data-tab="car" class="ts tab active" id="group-1-car">
+            </div>
+            <div data-tab-group="type1" data-tab="bus" class="ts tab" id="group-1-bus">
+                <table cellspacing="0" border="1" align="center">
+                    <!--大客車-->
+                    <tbody  id="table-1-Bus">
+                    </tbody>
+                </table>
+            </div>
+            
+            <center><div id="infoDiv" style="margin-top:20px">
+                <table style="border: 1.5px solid gray;border-radius: 5px;margin:40px">
+                    <tbody  id="overview_info"  >
+                        <tr><th id="info_name" style="padding: 7px;font-weight:bold;font-size:10px    border-bottom-style: solid;border-bottom-width: 1px;border-bottom-color: gray" > # </th></tr>
+                        <tr><th id="info_times" style="text-align:left;padding: 7px;">停車次數： --</th></tr>
+                        <tr><th id="info_parkingtime" style="text-align:left;padding: 7px;">停車時間： --</th></tr>
+                    </tbody>
+                </table>
+            </div></center>
+        </div>
+        <div class="record module">
+            <!--ts Table-->
+            <table class="ts celled selectable large table" id="RecordTable">
+                <thead id="recordTable">
+                    <tr id="RecordTr1"><th colspan="4"><center>停車紀錄</center></th></tr>
+                    <tr id="RecordTr2"><th>
+                    <select id='select_INorOUT' class="styled-select slate">
+                      <option value="">進入/離開</option>
+                      <option value='進入'>進入</option>
+                      <option value='離開'>離開</option>
+                    </select></th>
+                    <th>
+                    <select id='select_Area' class="styled-select slate">
+                      <option value="">區域</option>
+
+                    </select></th>
+
+                    <th>
+                    <select id='select_Place' class="styled-select slate">
+                      <option value="">停車格</option>
+
+                    </select>
+                    </th>
+
+                    <th>
+                    
+                    <label for="from">時間 from :</label>
+                    <input type="text" class="grayInput" id="from" name="from" style="width:5em;">
+                    <label for="to">to :</label>
+                    <input type="text" class="grayInput" id="to" name="to" style="width: 5em;">
+                    <input type="button" class="grayButton" id="queryTime" style="border: 1.5px solid gray;border-radius: 5px;" value=" 查詢 " >
+                    </th></tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <div class="power module">
+            <!--100 76 G 75 51 Y 50 26 O 25 0 R-->
+            <!--background-size-->
+            <div class="ts large attached tabbed menu active" id="TypeList2">
+                <a class="active item" data-tab-group="type2" data-tab="car">
+                    <i class="car icon"></i>小客車
+                </a>
+                <a class="item" data-tab-group="type2" data-tab="bus">
+                    <i class="bus icon"></i>大客車
+                </a>
+            </div>
+            <div data-tab-group="type2" data-tab="car" class="ts pointing secondary attached tabbed active tab menu" id="AreaList-2">
+                <!-- <a class="active item" data-tab-group="type/2area" data-tab="A">A區</a> -->
+                <!-- <a class="item" data-tab-group="type/2area" data-tab="B">B區</a> -->
+                <!-- <a class="item" data-tab-group="type/2area" data-tab="C">C區</a> -->
+            </div>
+            
+            <div data-tab-group="type2" data-tab="car" class="ts tab active" id="group-2-car">
+            </div>
+            <div data-tab-group="type2" data-tab="bus" class="ts tab" id="group-2-bus">
+                <table cellspacing="0" border="1" align="center">
+                    <!--大客車-->
+                    <tbody  id="table-2-Bus">
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+        <div class="edit module">
+            雙擊停車格可更改停車格名稱等資訊，點擊「+」字樣停車格可新增停車格，點擊停車格右上方「x」號可刪除停車格
+
+            <div class="ts large attached tabbed menu" id="TypeList3">
+                <a class="active item" data-tab-group="type3" data-tab="car">
+                    <i class="car icon"></i>小客車
+                </a>
+                <a class="item" data-tab-group="type3" data-tab="bus">
+                    <i class="bus icon"></i>大客車
+                </a>
+            </div>
+            <div data-tab-group="type3" data-tab="car" class="ts pointing secondary attached tabbed active tab menu" id="AreaList-3">
+                <!-- <a class="active item" data-tab-group="type1/area" data-tab="a">A區</a> -->
+                <!-- <a class="item" data-tab-group="type1/area" data-tab="b">B區</a> -->
+                <!-- <a class="item" data-tab-group="type1/area" data-tab="c">C區</a> -->
+            </div>
+            
+            <div data-tab-group="type3" data-tab="car" class="ts tab active" id="group-3-car">
+            </div>
+            <div data-tab-group="type3" data-tab="bus" class="ts tab" id="group-3-bus">
+                <table cellspacing="0" border="1" align="center">
+                    <!--大客車-->
+                    <tbody  id="table-3-Bus">
+                    </tbody>
+                </table>
+                    <p>
+                    <center><input type="button" class="button" value="儲存" onclick="storeData('Bus')"><center>
+            </div>
+
+        </div>
+        
+        <div class="report1 module">
+            <div class="row">
+                <div class="col l7 s12">
+                    <!-- Line Chart -->
+                    <div class="card-panel">
+                        <h4>各停車場停車次數統計(週)</h4>
+                            <label for="from_report1">起始日:</label>
+                            <input type="text" class="grayInput" id="from_report1" name="from_report1" style="width:5em;">
+                            <input type="button" class="grayButton" id="queryTime_linechart" style="border: 1.5px solid gray;border-radius: 5px;" value=" 查詢 " >
+
+                        <div id="flotLineChart" style="height: 250px"></div>
+                    </div>
+                    <!-- /Line Chart -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="report2 module">
+            <div class="col l5 s12">
+                <!-- Pie Chart -->
+                <div class="card-panel">
+                    <h4 id="report2_title">停車次數百分比</h4>
+                    
+                    <label for="from_report2">時間 from :</label>
+                    <input type="text" class="grayInput" id="from_report2" name="from_report2" style="width:5em;">
+                    <label for="to_report2">to :</label>
+                    <input type="text" class="grayInput" id="to_report2" name="to_report2" style="width: 5em;">
+                    <input type="button" class="grayButton" id="queryTime_pie" style="border: 1.5px solid gray;border-radius: 5px;" value=" 查詢 " >
+                    <div id="flotPieChart" style="height: 250px"></div>
+                </div>
+                <!-- /Pie Chart -->
+            </div>
+            
+        </div>
+
+        <div class="report3 module">
+            <tbody>
+            <table  class="ts celled selectable large table" id="TStoppingTimesReportTableTable" >
+                <thead id="StoppingTimesReportTable">
+                    <tr id="StoppingTimesReportTableTr0"><th colspan="2"><center>
+                        <div style="display:inline">
+                        <select id="report3TypeSelect">
+                            <option value="report3Type_year">年</option>
+                            <option value="report3Type_mon">月</option>
+                            <option value="report3Type_range">一段時間</option>
+                            <option value="report3Type_day">日</option>
+                        </select>
+                        
+                        <script>
+                        
+                            function queryreport3(){
+                                select = document.getElementById('report3TypeSelect').value;
+                                selectDict ={"report3Type_year":"report3Type_yearSelect",
+                                             "report3Type_mon":"report3Type_mon_input",
+                                             "report3Type_range":"report3Type_range_input",
+                                             "report3Type_day":"report3Type_day_input",
+                                            };
+                                t = document.getElementById(selectDict[select]).value;
+                                if(select=="report3Type_year"){
+                                    var startTime = (Date.parse(t)/1000)-28800;
+                                    var endTime =  (Date.parse(parseInt(t) + 1)/1000)-28800;
+                                }else if(select=="report3Type_mon"){
+                                    MonList = {"January":1, 
+                                                "February":2, 
+                                                "March":3, 
+                                                "April":4, 
+                                                "May":5, 
+                                                "June":6, 
+                                                "July":7, "August":8, "September":9, "October":10, "November":11, "December":12}
+                                    
+                                    var startTime = new Date(t.split(' ')[1],MonList[t.split(' ')[0]]-1, 1).getTime() /1000;
+                                    var endTime =  new Date(t.split(' ')[1],MonList[t.split(' ')[0] ], 0).getTime()/1000+86400;
+                                   
+                                }else if(select=="report3Type_range"){
+                                    var startTime = new Date(t.split('-')[0]).getTime() /1000;
+                                    var endTime =  new Date(t.split('-')[1]).getTime()/1000+86400;
+                                   
+                                }else if(select=="report3Type_day"){
+                                    var startTime = new Date(t)/1000;
+                                    var endTime =  startTime + 86400;
+                                   
+                                }
+                                
+                            site = document.getElementById("select_site").value;
+                            
+                            getData("/REPORTAPI_3/"+ site +"/"+ startTime +"/"+endTime , function(responseText) {
+                                responseJson = JSON.parse(responseText);
+                                $("#StoppingTimesReportTable>tr:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3))").remove();
+                                if(Object.keys(responseJson).length==0){
+                                       alert("時間區段查無資料。");
+                                }
+                                for(i in responseJson){
+                                    var TRnode = document.createElement("tr");
+                                    var recordTable = document.getElementById("StoppingTimesReportTable");
+                    
+                                    var THnode = document.createElement("td");
+                                    var textnode = document.createTextNode(responseJson[i]["ParkingSpace"]);
+
+                                    var THnode2 = document.createElement("td");
+                                    var textnode2 = document.createTextNode(responseJson[i]["ParkingTimes"]);
+                                    recordTable.appendChild(TRnode).appendChild(THnode).appendChild(textnode).parentNode.parentNode.appendChild(THnode2).appendChild(textnode2);
+                                
+                            }   
+                            });
+
+                            }
+                           
+                        </script>
+                        </div>
+                        <div id = "report3Type_year" style="display: inline;position:absolute;z-index:1">
+                        <select id="report3Type_yearSelect">
+                        </select>
+                        </div>
+                        <div id = "report3Type_mon"  style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input id="report3Type_mon_input"
+                               type="text"
+                               class="datepicker-here"
+                               data-language='en'
+                               data-min-view="months"
+                               data-view="months"
+                               data-date-format="MM yyyy" 
+                               style="background-color:#DDDDDD"
+                               />
+
+                        </div>
+                        <div id = "report3Type_range" style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input  id="report3Type_range_input"
+                                type="text"
+                                data-range="true"
+                                data-multiple-dates-separator=" - "
+                                data-language="en"
+                                class="datepicker-here"
+                                style="background-color:#DDDDDD;width: 15em;"
+                               />
+                        </div>
+                        <div id = "report3Type_day" style="visibility:hidden;display: inline;position: absolute;z-index:1;">
+                        <input id="report3Type_day_input" type='text' class='datepicker-here' data-language='en' style="background-color:#DDDDDD"/>
+                        </div>
+
+                        <input type="button" class="grayButton" id="queryreport3Time" style="border: 1.5px solid gray;border-radius: 5px;position: relative;margin-left: 16em" onclick="queryreport3()" value=" 查詢 " >
+
+                    </center></th></tr>
+                    <tr id="StoppingTimesRankReportTr1"><th colspan="2"><center>停車次數統計表</center></th></tr>
+                    <tr id="StoppingTimesRankReportTr2">
+                    <th>
+                        停車格
+                    </th>
+
+                    <th>
+                        停車次數
+                    </th>
+
+                   </tr>
+                </thead>
+                
+            </table>
+            </tbody>
+        </div>
+
+        <div class="report4 module">
+            <tbody>
+            <table  class="ts celled selectable large table" id="TStoppingTimeReportTable" >
+                <thead id="StoppingTimeReportTable">
+                    <tr id="StoppingTimeReportTr0"><th colspan="4"><center>
+                        <div style="display:inline">
+                        <select id="report4TypeSelect">
+                            <option value="report4Type_year">年</option>
+                            <option value="report4Type_mon">月</option>
+                            <option value="report4Type_range">一段時間</option>
+                            <option value="report4Type_day">日</option>
+                        </select>
+                        
+                        <script>
+                        
+                            function queryreport4(){
+                                select = document.getElementById('report4TypeSelect').value;
+                                selectDict ={"report4Type_year":"report4Type_yearSelect",
+                                             "report4Type_mon":"report4Type_mon_input",
+                                             "report4Type_range":"report4Type_range_input",
+                                             "report4Type_day":"report4Type_day_input",
+                                            };
+                                t = document.getElementById(selectDict[select]).value;
+                                if(select=="report4Type_year"){
+                                    var startTime = (Date.parse(t)/1000)-28800;
+                                    var endTime =  (Date.parse(parseInt(t) + 1)/1000)-28800;
+                                }else if(select=="report4Type_mon"){
+                                    MonList = {"January":1, 
+                                                "February":2, 
+                                                "March":3, 
+                                                "April":4, 
+                                                "May":5, 
+                                                "June":6, 
+                                                "July":7, "August":8, "September":9, "October":10, "November":11, "December":12}
+                                    
+                                    var startTime = new Date(t.split(' ')[1],MonList[t.split(' ')[0]]-1, 1).getTime() /1000;
+                                    var endTime =  new Date(t.split(' ')[1],MonList[t.split(' ')[0] ], 0).getTime()/1000+86400;
+                                   
+                                }else if(select=="report4Type_range"){
+                                    var startTime = new Date(t.split('-')[0]).getTime() /1000;
+                                    var endTime =  new Date(t.split('-')[1]).getTime()/1000+86400;
+                                   
+                                }else if(select=="report4Type_day"){
+                                    var startTime = new Date(t)/1000;
+                                    var endTime =  startTime + 86400;
+                                   
+                                }
+                                
+                            site = document.getElementById("select_site").value;
+                        
+
+                            getData("/REPORTAPI_4/"+ site +"/"+ startTime +"/"+endTime, function(responseText) {
+                             responseJson = JSON.parse(responseText);
+                                $("#StoppingTimeReportTable>tr:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3))").remove();
+                                // if(responseJson.length==0){
+                                if(Object.keys(responseJson).length==0){
+                                       alert("時間區段查無資料。");
+                                }
+                                for(site in responseJson){
+                                    
+                                        var TRnode = document.createElement("tr");
+                                        var recordTable = document.getElementById("StoppingTimeReportTable");
+                        
+                                        var THnode = document.createElement("td");
+                                        var textnode = document.createTextNode(site);
+
+                                        var THnode2 = document.createElement("td");
+                                        var textnode2 = document.createTextNode(responseJson[site]["longest"]+"("+responseJson[site]["longestTime"]+")");
+
+                                        var THnode3 = document.createElement("td");
+                                        var textnode3 = document.createTextNode(responseJson[site]["Shortest"]+"("+responseJson[site]["ShortestTime"]+")");
+                                        var THnode4 = document.createElement("td");
+                                        var textnode4 = document.createTextNode(responseJson[site]["average"]);
+
+                                        recordTable.appendChild(TRnode).appendChild(THnode).appendChild(textnode).parentNode.parentNode.appendChild(THnode2).appendChild(textnode2).parentNode.parentNode.appendChild(THnode3).appendChild(textnode3).parentNode.parentNode.appendChild(THnode4).appendChild(textnode4);
+                                    
+                                
+                                    }
+                                
+                                });
+
+                            }
+                            
+                        </script>
+                        </div>
+                        <div id = "report4Type_year" style="display: inline;position:absolute;z-index:1">
+                        <select id="report4Type_yearSelect">
+                        </select>
+                        </div>
+                        <div id = "report4Type_mon"  style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input id="report4Type_mon_input"
+                               type="text"
+                               class="datepicker-here"
+                               data-language='en'
+                               data-min-view="months"
+                               data-view="months"
+                               data-date-format="MM yyyy" 
+                               style="background-color:#DDDDDD"
+                               />
+
+                        </div>
+                        <div id = "report4Type_range" style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input  id="report4Type_range_input"
+                                type="text"
+                                data-range="true"
+                                data-multiple-dates-separator=" - "
+                                data-language="en"
+                                class="datepicker-here"
+                                style="background-color:#DDDDDD;width: 15em;"
+                               />
+                        </div>
+                        <div id = "report4Type_day" style="visibility:hidden;display: inline;position: absolute;z-index:1;">
+                        <input id="report4Type_day_input" type='text' class='datepicker-here' data-language='en' style="background-color:#DDDDDD"/>
+                        </div>
+
+                        <input type="button" class="grayButton"  id="queryreport4Time" style="border: 1.5px solid gray;border-radius: 5px;position: relative;margin-left: 16em" onclick="queryreport4()" value=" 查詢 " >
+
+                    </center></th></tr>
+                    <tr id="StoppingTimeReportTr1"><th colspan="4"><center>停車時間統計表</center></th></tr>
+                    <tr id="StoppingTimeReportTr2">
+                    <th>
+                        停車格
+                    </th>
+
+                    <th>
+                        最長時間
+                    </th>
+                    <th>
+                        最短時間
+                    </th>
+                    <th>
+                        平均時間
+                    </th>
+
+                   </tr>
+                </thead>
+                
+            </table>
+            </tbody>
+        </div>
+
+        <div class="report5 module">
+            <tbody>
+            <table  class="ts celled selectable large table" id="TStoppingTimesRankReportTable" >
+                <thead id="StoppingTimesRankReportTable">
+                    <tr id="StoppingTimesRankReportTr0"><th colspan="3"><center>
+                        <div style="display:inline">
+                        <select id="report5TypeSelect">
+                            <option value="report5Type_year">年</option>
+                            <option value="report5Type_mon">月</option>
+                            <option value="report5Type_range">一段時間</option>
+                            <option value="report5Type_day">日</option>
+                        </select>
+                        
+                        <script>
+                        
+                            function queryreport5(){
+                                select = document.getElementById('report5TypeSelect').value;
+                                selectDict ={"report5Type_year":"report5Type_yearSelect",
+                                             "report5Type_mon":"report5Type_mon_input",
+                                             "report5Type_range":"report5Type_range_input",
+                                             "report5Type_day":"report5Type_day_input",
+                                            };
+                                t = document.getElementById(selectDict[select]).value;
+                                if(select=="report5Type_year"){
+                                    var startTime = (Date.parse(t)/1000)-28800;
+                                    var endTime =  (Date.parse(parseInt(t) + 1)/1000)-28800;
+                                }else if(select=="report5Type_mon"){
+                                    MonList = {"January":1, 
+                                                "February":2, 
+                                                "March":3, 
+                                                "April":4, 
+                                                "May":5, 
+                                                "June":6, 
+                                                "July":7, "August":8, "September":9, "October":10, "November":11, "December":12}
+                                    
+                                    var startTime = new Date(t.split(' ')[1],MonList[t.split(' ')[0]]-1, 1).getTime() /1000;
+                                    var endTime =  new Date(t.split(' ')[1],MonList[t.split(' ')[0] ], 0).getTime()/1000+86400;
+                                   
+                                }else if(select=="report5Type_range"){
+                                    var startTime = new Date(t.split('-')[0]).getTime() /1000;
+                                    var endTime =  new Date(t.split('-')[1]).getTime()/1000+86400;
+                                   
+                                }else if(select=="report5Type_day"){
+                                    var startTime = new Date(t)/1000;
+                                    var endTime =  startTime + 86400;
+                                   
+                                }
+                                
+                            site = document.getElementById("select_site").value;
+                            limitData = 10
+                            if(document.getElementById("report5LimitData").value!=''){
+                                limitData = document.getElementById("report5LimitData").value;
+                            }
+                            getData("/REPORTAPI_5/"+ site +"/"+ startTime +"/"+endTime +"/"+limitData , function(responseText) {
+                                responseJson = JSON.parse(responseText);
+                                $("#StoppingTimesRankReportTable>tr:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(3))").remove();
+                                if(Object.keys(responseJson).length==0){
+                                       alert("時間區段查無資料。");
+                                }
+                                for(i in responseJson){
+                                    var TRnode = document.createElement("tr");
+                                    var recordTable = document.getElementById("StoppingTimesRankReportTable");
+                    
+                                    var THnode = document.createElement("td");
+                                    var textnode = document.createTextNode(i);
+
+                                    var THnode2 = document.createElement("td");
+                                    var textnode2 = document.createTextNode(responseJson[i]["ParkingSpace"]);
+
+                                    var THnode3 = document.createElement("td");
+                                    var textnode3 = document.createTextNode(responseJson[i]["ParkingTimes"]);
+                                    recordTable.appendChild(TRnode).appendChild(THnode).appendChild(textnode).parentNode.parentNode.appendChild(THnode2).appendChild(textnode2).parentNode.parentNode.appendChild(THnode3).appendChild(textnode3);
+                                
+                            }   
+                            });
+
+                            }
+                            window.onload = function() {
+                                    Select_report5 = document.getElementById("report5TypeSelect");
+                                    Select_report5.onchange = function() {
+                                    SelectList_report5 = ["report5Type_year","report5Type_mon","report5Type_range","report5Type_day"]
+                                    for(i in SelectList_report5){
+                                        if(SelectList_report5[i]==Select_report5.value){
+                                            document.getElementById(SelectList_report5[i]).style.visibility='';
+                                        }else{
+                                            document.getElementById(SelectList_report5[i]).style.visibility='hidden';
+                                        }
+                                    }
+                                    
+                                       
+                                }
+                                var min = 2015,
+                                    max = new Date().getFullYear();
+
+                                    select = document.getElementById('report5Type_yearSelect');
+
+                                for (var i = min; i<=max; i++){
+                                    var opt = document.createElement('option');
+                                    opt.value = i;
+                                    opt.innerHTML = String(i)+"年";
+                                    select.appendChild(opt);
+                                } 
+
+                                Select_report4 = document.getElementById("report4TypeSelect");
+                                    Select_report4.onchange = function() {
+                                    SelectList_report4 = ["report4Type_year","report4Type_mon","report4Type_range","report4Type_day"]
+                                    for(i in SelectList_report4){
+                                        if(SelectList_report4[i]==Select_report4.value){
+                                            document.getElementById(SelectList_report4[i]).style.visibility='';
+                                        }else{
+                                            document.getElementById(SelectList_report4[i]).style.visibility='hidden';
+                                        }
+                                    } 
+                                       
+                                }
+                                var min = 2015,
+                                    max = new Date().getFullYear();
+
+                                    select = document.getElementById('report4Type_yearSelect');
+                                for (i = min; i<=max; i++){
+                                    opt = document.createElement('option');
+                                    opt.value = i;
+                                    opt.innerHTML = String(i)+"年";
+                                    select.appendChild(opt);
+                                } 
+                            
+                                
+                                Select = document.getElementById("report3TypeSelect");
+                                    Select.onchange = function() {
+                                    SelectList = ["report3Type_year","report3Type_mon","report3Type_range","report3Type_day"]
+                                    for(i in SelectList){
+                                        if(SelectList[i]==Select.value){
+                                            document.getElementById(SelectList[i]).style.visibility='';
+                                        }else{
+                                            document.getElementById(SelectList[i]).style.visibility='hidden';
+                                        }
+                                    }
+                                    
+                                       
+                                }
+                                var min = 2015,
+                                    max = new Date().getFullYear();
+
+                                    select = document.getElementById('report3Type_yearSelect');
+
+                                for (i = min; i<=max; i++){
+                                    opt = document.createElement('option');
+                                    opt.value = i;
+                                    opt.innerHTML = String(i)+"年";
+                                    select.appendChild(opt);
+                                } 
+                            
+                            }
+                        </script>
+                        </div>
+                        <div id = "report5Type_year" style="display: inline;position:absolute;z-index:1">
+                        <select id="report5Type_yearSelect">
+                        </select>
+                        </div>
+                        <div id = "report5Type_mon"  style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input id="report5Type_mon_input"
+                               type="text"
+                               class="datepicker-here"
+                               data-language='en'
+                               data-min-view="months"
+                               data-view="months"
+                               data-date-format="MM yyyy" 
+                               style="background-color:#DDDDDD"
+                               />
+
+                        </div>
+                        <div id = "report5Type_range" style="visibility:hidden;display: inline;position:absolute;z-index:1">
+                        <input  id="report5Type_range_input"
+                                type="text"
+                                data-range="true"
+                                data-multiple-dates-separator=" - "
+                                data-language="en"
+                                class="datepicker-here"
+                                style="background-color:#DDDDDD;width: 15em;"
+                               />
+                        </div>
+                        <div id = "report5Type_day" style="visibility:hidden;display: inline;position: absolute;z-index:1;">
+                        <input id="report5Type_day_input" type='text' class='datepicker-here' data-language='en' style="background-color:#DDDDDD"/>
+                        </div>
+
+                        <input type="text" id="report5LimitData" 
+                             style="position: relative;margin-left: 16em;ime-mode:Disabled"  
+                             onkeypress="var k=event.keyCode; return k>=48&&k<=57"
+                             onpaste="return !clipboardData.getData('text').match(/\D/)"
+                             ondragenter="return false"
+                             placeholder="｜查詢前幾名(預設10)"
+                        ></input>
+
+                        <input type="button" class="grayButton" id="queryreport5Time" style="border: 1.5px solid gray;border-radius: 5px;position: relative;margin-left: 1em" onclick="queryreport5()" value=" 查詢 " >
+
+                    </center></th></tr>
+                    <tr id="StoppingTimesRankReportTr1"><th colspan="3"><center>停車次數排名表</center></th></tr>
+                    <tr id="StoppingTimesRankReportTr2">
+                    <th>
+                        名次
+                    </th>
+
+                    <th>
+                        停車格
+                    </th>
+
+                    <th>
+                        停車次數
+                    </th>
+
+                   </tr>
+                </thead>
+                
+            </table>
+            </tbody>
+        </div>
+   </div>   
+ </body>
+    
+    <script defer="true">
+    var MapData = [];
+    // 儲存編輯停車格資料
+    function storeData(areaType)
+    {
+
+        switch(areaType)
+        {
+        case 'A':
+          var element = document.getElementById('table-3-car-A');
+          break;
+        case 'B':
+          var element = document.getElementById('table-3-car-B');
+          break;
+        case 'C':
+          var element = document.getElementById('table-3-car-C');
+          break;
+        case 'Bus':
+          var element = document.getElementById('table-3-Bus');
+          break;
+        default:
+          var element = document.getElementById('table-3-car-A');
+        }
+        
+        if(element){
+            var html = element.outerHTML;       
+            var data = { html: html }; 
+            var json = JSON.stringify(data);
+            var site = document.getElementById("select_site").value;
+            $.post( "/store/"+ areaType + "/" + site, {
+                javascript_data: json 
+            });
+            
+        location.replace('/');
+        }
+    }
+    // 從DB抓取資料
+    function getData(url, cb)
+     {
+       var xmlhttp;
+       if (window.XMLHttpRequest){
+           xmlhttp=new XMLHttpRequest();}
+       else{
+           xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");}
+
+        xmlhttp.onreadystatechange=function(){
+            if (xmlhttp.readyState==4 && xmlhttp.status==200){
+                if( typeof cb === 'function' )
+                    cb(xmlhttp.responseText);
+            }
+        }
+
+       xmlhttp.open("GET", url, true);
+       xmlhttp.send();
+
+    }
+    var site = document.getElementById("select_site").value;
+    // 從Json檔抓取資料
+    function JsonData(site){
+     getData("../static/js/ParkingLotMap_"+site+".json", function(responseText) {
+        responseJson = JSON.parse(responseText);
+        
+        
+        MapData = []
+        for(CarType in responseJson['Car']){
+            MapData[CarType] = responseJson['Car'][CarType];
+        }
+        MapData['Bus'] = responseJson['Bus']['Bus'];
+
+    //new CarList element And RecordSelect
+    // 以下js用於抓取Json檔資訊形成頁面view
+    for(t=1;t<=3;t++){
+        i = 0;
+        for(AreaType in MapData){
+                if(t==3){
+                    var optionNode_area =  document.createElement("option");
+                        optionNode_area.setAttribute('value', AreaType);
+                    var optionTextNode_area = document.createTextNode(AreaType);
+                    optionNode_area.append(optionTextNode_area)
+                    document.getElementById("select_Area").append(optionNode_area);
+                    
+                    for(place in MapData[AreaType]){
+                        var optionNode_place =  document.createElement("option");
+                            optionNode_place.setAttribute('value', MapData[AreaType][place]['Name']);
+                        var optionTextNode_place = document.createTextNode(MapData[AreaType][place]['Name']);
+                        optionNode_place.append(optionTextNode_place)
+                        document.getElementById("select_Place").append(optionNode_place);
+                    }
+
+                }
+            if(AreaType!='Bus'){
+                var aNode = document.createElement("a");
+                    aNode.setAttribute('class', 'item');
+                    aNode.setAttribute('data-tab-group', 'type' + t + '/area');
+                    aNode.setAttribute('data-tab', AreaType);
+                    aNode.setAttribute('name', AreaType);
+                    aNode.setAttribute('id', t);
+                    aNode.onclick = function (){
+                        OgMu = this.parentNode.querySelector(".active.item");
+                        if(OgMu){OgMu.setAttribute('class', 'item');}
+                        OgEl = this.parentNode.parentNode.querySelector(".ts.tab.active.car");
+                        if(OgEl){OgEl.setAttribute('class', 'ts tab car');}
+                        this.setAttribute('class', 'active item');
+                        el = document.getElementById("div-car-" +this.id+'-'+ this.name);
+                        el.setAttribute('class', 'ts tab active car');
+                        };
+                var divNode = document.createElement("div");
+                    divNode.setAttribute('data-tab-group', 'type'+t+'/area');
+                    divNode.setAttribute('data-tab', AreaType);
+                    divNode.setAttribute('name', AreaType);
+                    divNode.setAttribute('id', "div-car-"+t+'-'+AreaType);
+                    divNode.setAttribute('class', 'ts tab car');
+                if(i==0){divNode.setAttribute('class', 'ts tab car active');}
+                var tableNode = document.createElement("table");
+                    tableNode.setAttribute("cellspacing","0");
+                    tableNode.setAttribute("border","1");
+                    tableNode.setAttribute("align","center");
+                    
+                var tbodyNode = document.createElement("tbody");
+                    tbodyNode.setAttribute("id","table-"+t+"-car-"+ AreaType);    
+                
+                divNode.appendChild(tableNode).appendChild(tbodyNode);
+                
+                var textnode = document.createTextNode(AreaType +"區");
+                if(i==0){aNode.setAttribute('class', 'active item');}
+                aNode.appendChild(textnode);
+                document.getElementById("AreaList-"+ t).appendChild(aNode);
+                document.getElementById("group-"+t+"-car").appendChild(divNode);
+                
+                
+                
+                var pNode = document.createElement("p");
+                var centerNode = document.createElement("center");
+                var buttonNode = document.createElement("input");
+                    buttonNode.setAttribute("type","button");  
+                    buttonNode.setAttribute("class","button"); 
+                    buttonNode.setAttribute("value","儲存");
+                    buttonNode.setAttribute("id","buttonnnn");
+                    buttonNode.setAttribute("onclick","storeData('"+ AreaType +"');");
+                if(t==3){
+                document.getElementById("div-car-"+t+"-"+AreaType).appendChild(pNode).parentNode.appendChild(centerNode).appendChild(buttonNode);}
+                
+                i++;
+                
+            }   
+            }
+        }
+        {   // 停車場概況
+        for(CarType in MapData){
+            var r=0;
+            for(i in MapData[CarType])
+            {
+
+                var TDnode = document.createElement("td");
+                    TDnode.onclick = function () {
+                             document.getElementById('info_name').innerHTML = this.childNodes[2].nodeValue;
+                             getData("/API/RecordPlace-"+this.childNodes[2].nodeValue+"/"+document.getElementById('select_site').value, function(responseText) {
+                             responseJson = JSON.parse(responseText);document.getElementById("info_times").innerHTML = "停車次數："+ responseJson["parkingTimes"];
+                             var parkingrecords = "";
+                                for(i in responseJson["parkingRecord"]){
+                                    parkingrecords += (responseJson["parkingRecord"][i]["I"]+" ~ " + responseJson["parkingRecord"][i]["L"] + "<br>" ) ;
+                                    }
+                                document.getElementById("info_parkingtime").innerHTML = "<p style=\'margin-left: 5em;text-indent: -5em;\'>停車時間：" +parkingrecords+"</p>";
+                                });
+                                };
+                    
+                var TDnode_official = document.createElement("td");
+                    TDnode_official.setAttribute("class" ,"official");
+                    TDnode_official.onclick = function () {
+                             document.getElementById('info_name').innerHTML = this.childNodes[2].nodeValue;
+                             getData("/API/RecordPlace-"+this.childNodes[2].nodeValue+"/"+document.getElementById('select_site').value, function(responseText) {
+                             responseJson = JSON.parse(responseText);document.getElementById("info_times").innerHTML = "停車次數："+ responseJson["parkingTimes"];
+                             var parkingrecords = "";
+                                for(i in responseJson["parkingRecord"]){
+                                    parkingrecords += (responseJson["parkingRecord"][i]["I"]+" ~ " + responseJson["parkingRecord"][i]["L"] + "<br>" ) ;
+                                    }
+                                document.getElementById("info_parkingtime").innerHTML = "<p style=\'margin-left: 5em;text-indent: -5em;\'>停車時間：" +parkingrecords+"</p>";
+                                });
+                                };
+                var TDnode_handicap = document.createElement("td");
+                    TDnode_handicap.setAttribute("class" ,"disable");
+                    TDnode_handicap.onclick = function () {
+                             document.getElementById('info_name').innerHTML = this.childNodes[2].nodeValue;
+                             getData("/API/RecordPlace-"+this.childNodes[2].nodeValue+"/"+document.getElementById('select_site').value, function(responseText) {
+                             responseJson = JSON.parse(responseText);document.getElementById("info_times").innerHTML = "停車次數："+ responseJson["parkingTimes"];
+                             var parkingrecords = "";
+                                for(i in responseJson["parkingRecord"]){
+                                    parkingrecords += (responseJson["parkingRecord"][i]["I"]+" ~ " + responseJson["parkingRecord"][i]["L"] + "<br>" ) ;
+                                    }
+                                document.getElementById("info_parkingtime").innerHTML = "<p style=\'margin-left: 5em;text-indent: -5em;\'>停車時間：" +parkingrecords+"</p>";
+                                });
+                                };
+                var TDnode_moon = document.createElement("td");
+                    TDnode_moon.setAttribute("class" ,"night");
+                    TDnode_moon.onclick = function () {
+                         document.getElementById('info_name').innerHTML = this.childNodes[2].nodeValue;
+                         getData("/API/RecordPlace-"+this.childNodes[2].nodeValue+"/"+document.getElementById('select_site').value, function(responseText) {
+                         responseJson = JSON.parse(responseText);document.getElementById("info_times").innerHTML = "停車次數："+ responseJson["parkingTimes"];
+                         var parkingrecords = "";
+                            for(i in responseJson["parkingRecord"]){
+                                parkingrecords += (responseJson["parkingRecord"][i]["I"]+" ~ " + responseJson["parkingRecord"][i]["L"] + "<br>" ) ;
+                                }
+                            document.getElementById("info_parkingtime").innerHTML = "<p style=\'margin-left: 5em;text-indent: -5em;\'>停車時間：" +parkingrecords+"</p>";
+                            });
+                            };
+                var official_node = document.createElement("i");
+                    official_node.setAttribute("class" ,"ts suitcase icon");
+                var handicap_node = document.createElement("i");
+                    handicap_node.setAttribute("class" ,"ts handicap icon");
+                var moon_node = document.createElement("i");
+                    moon_node.setAttribute("class" ,"ts moon icon");
+                var textnode = document.createTextNode(MapData[CarType][i].Name);
+                var Inode = document.createElement("i");
+                var Brnode = document.createElement("br");
+                var Brnode2 = document.createElement("br");
+                Inode.setAttribute("class" ,"ts icon circle");
+                if(MapData[CarType][i].isNumbered){TDnode.appendChild(Inode);}
+                
+                if(r!=MapData[CarType][i].row){
+                    r=r+1
+                    var TRnode = document.createElement("tr");
+                    if(CarType=='Bus'){
+                        CarTable_A = document.getElementById("table-1-Bus").appendChild(TRnode);
+                        }else{
+                        CarTable_A = document.getElementById("table-1-car-"+ CarType).appendChild(TRnode);
+                        }
+                    
+                }
+                
+                if(MapData[CarType][i].isOfficial==true){
+                    if(MapData[CarType][i].isNumbered){TDnode_official.appendChild(Inode).parentNode.appendChild(Brnode);}
+                    CarTable_A.appendChild(TDnode_official).appendChild(textnode).parentNode.appendChild(Brnode2).parentNode.appendChild(official_node).childNodes[0];
+                }else if(MapData[CarType][i].isDisable==true){
+                    if(MapData[CarType][i].isNumbered){TDnode_handicap.appendChild(Inode).parentNode.appendChild(Brnode);}
+                    CarTable_A.appendChild(TDnode_handicap).appendChild(textnode).parentNode.appendChild(Brnode2).parentNode.appendChild(handicap_node).childNodes[0];
+                }else if(MapData[CarType][i].isNight==true){
+                    if(MapData[CarType][i].isNumbered){TDnode_moon.appendChild(Inode).parentNode.appendChild(Brnode);}
+                    CarTable_A.appendChild(TDnode_moon).appendChild(textnode).parentNode.appendChild(Brnode2).parentNode.appendChild(moon_node).childNodes[0];
+                }else{
+                    CarTable_A.appendChild(TDnode).appendChild(Brnode).parentNode.appendChild(textnode).childNodes[0];
+                }
+            }
+        }
+        }
+        { // 停車場裝置電量
+        for(CarType in MapData){
+            var r=0;         
+            for(i in MapData[CarType])
+            {
+                    var TDnode = document.createElement("td");
+                    var official_node = document.createElement("i");
+                        official_node.setAttribute("class" ,"ts suitcase icon");
+                    var handicap_node = document.createElement("i");
+                        handicap_node.setAttribute("class" ,"ts handicap icon");
+                    var moon_node = document.createElement("i");
+                        moon_node.setAttribute("class" ,"ts moon icon");
+                    var textnode = document.createTextNode(MapData[CarType][i].Name);
+                    var Inode = document.createElement("i")
+                    var Brnode = document.createElement("br")
+
+                    Inode.setAttribute("class" ,"ts icon circle");
+                    if(MapData[CarType][i].isNumbered){
+                        TDnode.appendChild(Inode).parentNode.appendChild(Brnode);
+                        Brnode = document.createElement("br");
+                    }
+                    if(r!=MapData[CarType][i].row){
+                        r=r+1
+                        var TRnode = document.createElement("tr");
+                        if(CarType=='Bus'){
+                            CarTable_A = document.getElementById("table-2-Bus").appendChild(TRnode);
+                            }else{
+                            CarTable_A = document.getElementById("table-2-car-"+CarType).appendChild(TRnode);
+                            }
+                    }
+                        var inputNode = document.createElement("input"); //power
+                            inputNode.setAttribute("value", "---");
+                            inputNode.setAttribute("style", "text-align: center");
+                            inputNode.setAttribute("disabled","disabled");
+                            inputNode.setAttribute("id", "Power-" + MapData[CarType][i].MacAddr);
+                        var Brnode2 = Brnode.cloneNode(true);
+                        CarTable_A.appendChild(TDnode).appendChild(textnode).parentNode.appendChild(Brnode2).parentNode.appendChild(inputNode).childNodes[0];
+                }
+            }
+        }
+    
+    
+        { // 編輯停車格
+        for(CarType in MapData){
+            var r=1;  //row
+            var i=1;  //index
+            for(MacAddr in MapData[CarType])
+            {
+                    var TDnode = document.createElement("td");
+                        TDnode.ondblclick = function () {
+                            that = this;
+                            var ic = that.childNodes[4];
+                            if(that.classList.contains("official")){
+                                that.setAttribute("class" ,"disable");
+                                ic.setAttribute("class" ,"ts handicap icon");
+                            }else if(that.classList.contains("disable")){
+                                that.setAttribute("class" ,"night");
+                                ic.setAttribute("class" ,"ts  moon icon");
+                            }else if(that.classList.contains("night")){
+                                that.removeAttribute("class")
+                                ic.removeAttribute("class")
+                            }else{
+                                that.setAttribute("class" ,"official");
+                                ic.setAttribute("class" ,"ts suitcase icon");
+                            }
+                        };
+                    var TDnode2 = TDnode.cloneNode(true);
+                    var TDnode3 = TDnode.cloneNode(true);
+                    var TDnode4 = TDnode.cloneNode(true);
+                    var TDnode5 = TDnode.cloneNode(true);
+                    var Icon_node = document.createElement("i");
+                    var textnode = document.createElement("input");
+                        textnode.setAttribute("type","text");
+                        textnode.setAttribute("name","PlaceName");
+                        textnode.setAttribute("style","width:120px;text-align:center;");
+                        textnode.setAttribute("value", MapData[CarType][MacAddr].Name);
+                        textnode.onchange = function () {
+                            this.setAttribute("value", this.value);
+                        };
+                    var textnode_addr = document.createElement("input");
+                        textnode_addr.setAttribute("type","text");
+                        textnode_addr.setAttribute("name","PlaceMacaddr");
+                        textnode_addr.setAttribute("style","width:120px;text-align:center;color:gray;");
+                        textnode_addr.setAttribute("value",MapData[CarType][MacAddr]['MacAddr']);
+                        textnode_addr.onchange = function () {
+                            this.setAttribute("value", this.value);
+                        };
+                    var Inode = document.createElement("i");
+                        Inode.setAttribute("class" ,"ts close icon");
+                        Inode.setAttribute("name", r+1);
+                        Inode.onclick = function () {
+                            that = this.parentElement;
+                            oTest = this.parentNode.parentElement;
+                            oTest.removeChild(that);
+                        };
+                    var Brnode = document.createElement("br");
+                    var PlusInode = document.createElement("i");
+                        PlusInode.setAttribute("class" ,"ts plus icon");
+                        PlusInode.setAttribute("name" ,"1");
+                        PlusInode.onclick = function () {
+                            var textnode2 = document.createElement("input");
+                                textnode2.setAttribute("type","text");
+                                textnode2.setAttribute("name","PlaceName");
+                                textnode2.setAttribute("style","width:120px;text-align:center;");
+                                textnode2.setAttribute("value","自訂名稱");
+                                textnode2.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var textnode2_addr = document.createElement("input");
+                                textnode2_addr.setAttribute("type","text");
+                                textnode2_addr.setAttribute("name","PlaceMacaddr");
+                                textnode2_addr.setAttribute("style","width:120px;text-align:center;color:gray;");
+                                textnode2_addr.setAttribute("value","Mac Address");
+                                textnode2_addr.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var Icon_node = document.createElement("i");
+                            var Inode2 = Inode.cloneNode(true);
+                                Inode2.onclick = function () {
+                                    that = this.parentElement;
+                                    oTest = this.parentNode.parentElement;
+                                    oTest.removeChild(that);
+                                };
+                            var Brnode2 = document.createElement("br");
+                            var oTest = this.parentNode.parentNode;
+                            var newNode = document.createElement("td");
+                                newNode.ondblclick = function () {
+                                    that = this;
+                                    var ic = that.childNodes[4];
+                                    if(that.classList.contains("official")){
+                                        that.setAttribute("class" ,"disable");
+                                        ic.setAttribute("class" ,"ts handicap icon");
+                                    }else if(that.classList.contains("disable")){
+                                        that.setAttribute("class" ,"night");
+                                        ic.setAttribute("class" ,"ts  moon icon");
+                                    }else if(that.classList.contains("night")){
+                                        that.removeAttribute("class")
+                                        ic.removeAttribute("class")
+                                    }else{
+                                        that.setAttribute("class" ,"official");
+                                        ic.setAttribute("class" ,"ts suitcase icon");
+                                    }
+                                };  
+                            var reforeNode = this.parentNode;
+                            newNode.appendChild(Inode2).parentNode.appendChild(Brnode2).parentNode.appendChild(textnode2).parentNode.appendChild(textnode2_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                            oTest.insertBefore(newNode,reforeNode.nextSibling);
+                        };
+                    var PlusInode2 = document.createElement("i");
+                        PlusInode2.setAttribute("class" ,"ts plus icon");
+                        PlusInode2.setAttribute("name" ,"2");
+                        PlusInode2.onclick = function () {
+                            var Icon_node = document.createElement("i");
+                            var textnode3 = document.createElement("input");
+                                textnode3.setAttribute("type","text");
+                                textnode3.setAttribute("name","PlaceName");
+                                textnode3.setAttribute("style","width:120px;text-align:center;");
+                                textnode3.setAttribute("value","自訂名稱");
+                                textnode3.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var textnode3_addr = document.createElement("input");
+                                textnode3_addr.setAttribute("type","text");
+                                textnode3_addr.setAttribute("name","PlaceMacaddr");
+                                textnode3_addr.setAttribute("style","width:120px;text-align:center;color:gray;");
+                                textnode3_addr.setAttribute("value","Mac Address");
+                                textnode3_addr.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var Inode3 = Inode.cloneNode(true);
+                                Inode3.onclick = function () {
+                                    that = this.parentElement;
+                                    oTest = this.parentNode.parentElement;
+                                    oTest.removeChild(that);
+                                };
+                            var Brnode3 = document.createElement("br");
+                            var oTest = this.parentNode.parentNode;
+                            var newNode = document.createElement("td");
+                                newNode.ondblclick = function () {
+                                    that = this;
+                                    var ic = that.childNodes[4];
+                                    if(that.classList.contains("official")){
+                                        that.setAttribute("class" ,"disable");
+                                        ic.setAttribute("class" ,"ts handicap icon");
+                                    }else if(that.classList.contains("disable")){
+                                        that.setAttribute("class" ,"night");
+                                        ic.setAttribute("class" ,"ts  moon icon");
+                                    }else if(that.classList.contains("night")){
+                                        that.removeAttribute("class")
+                                        ic.removeAttribute("class")
+                                    }else{
+                                        that.setAttribute("class" ,"official");
+                                        ic.setAttribute("class" ,"ts suitcase icon");
+                                    }
+                                };  
+
+                            var reforeNode = this.parentNode;
+                            newNode.appendChild(Inode3).parentNode.appendChild(Brnode3).parentNode.appendChild(textnode3).parentNode.appendChild(textnode3_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                            oTest.insertBefore(newNode,reforeNode);
+                        };
+                    var TRnode = document.createElement("tr");
+                        TRnode.setAttribute("id", r);
+
+                    var PlusInode3 = PlusInode.cloneNode(true);
+                        PlusInode3.onclick = function () {
+                            var textnode2 = document.createElement("input");
+                                textnode2.setAttribute("type","text");
+                                textnode2.setAttribute("name","PlaceName");
+                                textnode2.setAttribute("style","width:120px;text-align:center;");
+                                textnode2.setAttribute("value","自訂名稱");
+                                textnode2.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var textnode2_addr = document.createElement("input");
+                                textnode2_addr.setAttribute("type","text");
+                                textnode2_addr.setAttribute("name","PlaceMacaddr");
+                                textnode2_addr.setAttribute("style","width:120px;text-align:center;color:gray;");
+                                textnode2_addr.setAttribute("value","Mac Address");
+                                textnode2_addr.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var Icon_node = document.createElement("i");
+                            var Inode2 = Inode.cloneNode(true);
+                                Inode2.onclick = function () {
+                                    that = this.parentElement;
+                                    oTest = this.parentNode.parentElement;
+                                    oTest.removeChild(that);
+                                };
+                            var Brnode2 = document.createElement("br");
+                            var oTest = this.parentNode.parentNode;
+                            var newNode = document.createElement("td");
+                                newNode.ondblclick = function () {
+                                    that = this;
+                                    var ic = that.childNodes[4];
+                                    if(that.classList.contains("official")){
+                                        that.setAttribute("class" ,"disable");
+                                        ic.setAttribute("class" ,"ts handicap icon");
+                                    }else if(that.classList.contains("disable")){
+                                        that.setAttribute("class" ,"night");
+                                        ic.setAttribute("class" ,"ts  moon icon");
+                                    }else if(that.classList.contains("night")){
+                                        that.removeAttribute("class")
+                                        ic.removeAttribute("class")
+                                    }else{
+                                        that.setAttribute("class" ,"official");
+                                        ic.setAttribute("class" ,"ts suitcase icon");
+                                    }
+                                };  
+                            var reforeNode = this.parentNode;
+                            newNode.appendChild(Inode2).parentNode.appendChild(Brnode2).parentNode.appendChild(textnode2).parentNode.appendChild(textnode2_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                            oTest.insertBefore(newNode,reforeNode.nextSibling);
+                        };
+                    var PlusInode4 = PlusInode2.cloneNode(true);
+                        PlusInode4.onclick = function () {
+                            var Icon_node = document.createElement("i");
+                            var textnode3 = document.createElement("input");
+                                textnode3.setAttribute("type","text");
+                                textnode3.setAttribute("name","PlaceName");
+                                textnode3.setAttribute("style","width:120px;text-align:center;");
+                                textnode3.setAttribute("value","自訂名稱");
+                                textnode3.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var textnode3_addr = document.createElement("input");
+                                textnode3_addr.setAttribute("type","text");
+                                textnode3_addr.setAttribute("name","PlaceMacaddr");
+                                textnode3_addr.setAttribute("style","width:120px;text-align:center;color:gray;");
+                                textnode3_addr.setAttribute("value","Mac Address");
+                                textnode3_addr.onchange = function () {
+                                    this.setAttribute("value", this.value);
+                                };
+                            var Inode3 = Inode.cloneNode(true);
+                                Inode3.onclick = function () {
+                                    that = this.parentElement;
+                                    oTest = this.parentNode.parentElement;
+                                    oTest.removeChild(that);
+                                };
+                            var Brnode3 = document.createElement("br");
+                            var oTest = this.parentNode.parentNode;
+                            var newNode = document.createElement("td");
+                                newNode.ondblclick = function () {
+                                    that = this;
+                                    var ic = that.childNodes[4];
+                                    if(that.classList.contains("official")){
+                                        that.setAttribute("class" ,"disable");
+                                        ic.setAttribute("class" ,"ts handicap icon");
+                                    }else if(that.classList.contains("disable")){
+                                        that.setAttribute("class" ,"night");
+                                        ic.setAttribute("class" ,"ts  moon icon");
+                                    }else if(that.classList.contains("night")){
+                                        that.removeAttribute("class")
+                                        ic.removeAttribute("class")
+                                    }else{
+                                        that.setAttribute("class" ,"official");
+                                        ic.setAttribute("class" ,"ts suitcase icon");
+                                    }
+                                };  
+
+                            var reforeNode = this.parentNode;
+                            newNode.appendChild(Inode3).parentNode.appendChild(Brnode3).parentNode.appendChild(textnode3).parentNode.appendChild(textnode3_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                            oTest.insertBefore(newNode,reforeNode);
+                        };
+                    if(i==1){
+                        if(CarType=='Bus'){
+                            CarTable_A = document.getElementById("table-3-Bus").appendChild(TRnode).appendChild(TDnode2).appendChild(PlusInode).parentNode.parentNode;
+                            }else{
+                            CarTable_A = document.getElementById("table-3-car-"+CarType).appendChild(TRnode).appendChild(TDnode2).appendChild(PlusInode).parentNode.parentNode;
+                            }
+                    }
+                    if(i!=1 && r!=MapData[CarType][MacAddr].row){
+                        r=r+1
+                        var TRnode2 = TRnode.cloneNode(true);
+                            TRnode2.setAttribute("id", r);
+                        CarTable_A.appendChild(TDnode4).appendChild(PlusInode2);
+                        if(CarType=='Bus'){
+                            CarTable_A = document.getElementById("table-3-Bus");
+                            }else{
+                            CarTable_A = document.getElementById("table-3-car-"+CarType);
+                            }
+
+                        CarTable_A = CarTable_A.appendChild(TRnode2).appendChild(TDnode3).appendChild(PlusInode3).parentNode.parentNode;
+                        
+                    }
+                    if(MapData[CarType][MacAddr].isOfficial==true){
+                        TDnode.setAttribute("class" ,"official");
+                        Icon_node.setAttribute("class" ,"ts suitcase icon");
+                        CarTable_A.appendChild(TDnode).appendChild(Inode).parentNode.appendChild(Brnode).parentNode.appendChild(textnode).parentNode.appendChild(textnode_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                    }else if(MapData[CarType][MacAddr].isDisable==true){
+                        TDnode.setAttribute("class" ,"disable");
+                        Icon_node.setAttribute("class" ,"ts handicap icon");
+                        CarTable_A.appendChild(TDnode).appendChild(Inode).parentNode.appendChild(Brnode).parentNode.appendChild(textnode).parentNode.appendChild(textnode_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                    }else if(MapData[CarType][MacAddr].isNight==true){
+                        TDnode.setAttribute("class" ,"night");
+                        Icon_node.setAttribute("class" ,"ts moon icon");
+                        CarTable_A.appendChild(TDnode).appendChild(Inode).parentNode.appendChild(Brnode).parentNode.appendChild(textnode).parentNode.appendChild(textnode_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                    }else{
+                        CarTable_A.appendChild(TDnode).appendChild(Inode).parentNode.appendChild(Brnode).parentNode.appendChild(textnode).parentNode.appendChild(textnode_addr).parentNode.appendChild(Icon_node).childNodes[0];
+                    }
+                    if(i==MapData[CarType].length){
+                        CarTable_A.appendChild(TDnode5).appendChild(PlusInode4);
+                    }
+                    i++;
+                }
+            }
+        }
+    
+    
+
+    });
+    }
+    JsonData(site);
+
+    // 停車紀錄頁，從DB抓取停車場進入、離開時間
+    function ParkingRecordDataFuc(site){
+    getData("/API/Record/"+ site, function(responseText) {
+        responseJson = JSON.parse(responseText);
+        for(i in responseJson){
+                lis = ['EnterOrLeave', 'Area', 'ParkinSpace', 'ParkingTime']; 
+                var TRnode = document.createElement("tr");
+                recordTable = document.getElementById("recordTable").appendChild(TRnode);
+
+                for(j in lis){
+                    var THnode = document.createElement("td");
+                    var textnode = document.createTextNode(responseJson[i][lis[j]]);
+                    if(j==0){
+                        if(responseJson[i][lis[j]]=="0"){THnode.setAttribute('style', 'background-color:red;color:white');
+                                                             var textnode = document.createTextNode("離開");
+                                                            }
+                        if(responseJson[i][lis[j]]=="1"){THnode.setAttribute('style', 'background-color:blue;color:white');
+                                                             var textnode = document.createTextNode("進入");
+                                                            }
+                    }
+                    recordTable.appendChild(THnode).appendChild(textnode);
+            }
+        }
+        });
+        }
+    ParkingRecordDataFuc(site);
+        
+    // PowerStatusData
+    // 停車格裝置電量頁，從DB抓取裝置電量
+    function PowerStatusDataFuc(site){
+    getData("/API/Power/"+ site, function(responseText) {
+        responseJson = JSON.parse(responseText);
+        for(i in responseJson){
+                power = document.getElementById( "Power-" + responseJson[i]['MacAddr']);
+                if(typeof(power) != 'undefined' && power != null){
+
+                    power.setAttribute("value", '電量： '+responseJson[i]['Power']);
+                }
+        }
+        });
+    }
+    PowerStatusDataFuc(site);
+
+    // 更改選取停車場時重置頁面Elem
+    $('#select_site').change( function(){
+        $("#recordTable>tr:not(:nth-child(1)):not(:nth-child(2))").remove();
+        var hide_tables = document.querySelectorAll('[id*="table-"]');
+        for (var i = 0; i < hide_tables.length; i++) {
+            hide_tables[i].innerHTML = "";
+        }
+        var hide_tab =document.querySelectorAll('[id^="AreaList-"]');
+        for (var i = 0; i < hide_tab.length; i++) {
+            hide_tab[i].innerHTML = "";
+        }
+        var hide_button =document.querySelectorAll('[id="buttonnnn"]');
+        for (var i = 0; i < hide_button.length; i++) {
+            hide_button[i].remove();
+        }
+        document.getElementById("select_Area").innerHTML = '<option value="">區域</option>';
+        document.getElementById("select_Place").innerHTML = '<option value="">停車格</option>';
+        
+        document.getElementById("info_name").innerHTML = '#';
+        document.getElementById("info_times").innerHTML = '停車次數： --';
+        document.getElementById("info_parkingtime").innerHTML = '停車時間： --';
+                    
+        ParkingRecordDataFuc(document.getElementById("select_site").value);
+        PowerStatusDataFuc(document.getElementById("select_site").value);
+        JsonData(document.getElementById("select_site").value);
+    });
+    </script>
+
+      <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+      <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+      
+      
+      <!-- Flot -->
+        <script type="text/javascript" src="../static/js/con_js/jquery.flot.js"></script>
+        <script type="text/javascript" src="../static/js/con_js/jquery.flot.time.js"></script>
+        <script type="text/javascript" src="../static/js/con_js/jquery.flot.pie.js"></script>
+        <script type="text/javascript" src="../static/js/con_js/jquery.flot.categories.js"></script>
+        <script type="text/javascript" src="../static/js/con_js/jquery.flot.tooltip.min.js"></script>
+        <script type="text/javascript" src="http://momentjs.com/downloads/moment.js"></script>
+<script>
+// 報表圖表
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++ ) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+    // Line Chart
+    function LineChart(startday) {
+        getData("/REPORTAPI_1/"+ startday , function(responseText) {
+            responseJson = JSON.parse(responseText);
+            var dataList = [];
+            var myColors = [];
+            if(responseJson.length>0){
+                for(i in responseJson){
+                    dataList.push( {
+                    data:responseJson[i]['data'],
+                    label: responseJson[i]['Site']
+                    })
+                    myColors.push(getRandomColor());
+                }
+                
+                var chart = $("#flotLineChart");
+                var startday_str = moment.unix(startday);
+                
+      
+                var options = {
+                    series: {
+                        lines: {
+                            show: true,
+                            lineWidth: 1,
+                            fill: true,
+                            fillColor: {
+                                colors: [{
+                                    opacity: 0.1
+                                }, {
+                                    opacity: 0.13
+                                }]
+                            }
+                        },
+                        points: {
+                            show: true,
+                            lineWidth: 2,
+                            radius: 3
+                        },
+                        shadowSize: 0,
+                        stack: true
+                    },
+                    grid: {
+                        hoverable: true,
+                        clickable: true,
+                        tickColor: "#f9f9f9",
+                        borderWidth: 0
+                    },
+                    legend: {
+                        // show: false
+                        backgroundOpacity: 0,
+                        labelBoxBorderColor: "#fff"
+                    },
+                    colors: myColors,
+                    xaxis: {
+                        ticks: [
+                            [1, startday_str.format("YYYY/MM/DD")],
+                            [2, startday_str.add('days', 1).format("YYYY/MM/DD")],
+                            [3, startday_str.add('days', 1).format("YYYY/MM/DD")],
+                            [4, startday_str.add('days', 1).format("YYYY/MM/DD")],
+                            [5, startday_str.add('days', 1).format("YYYY/MM/DD")],
+                            [6, startday_str.add('days', 1).format("YYYY/MM/DD")],
+                            [7, startday_str.add('days', 1).format("YYYY/MM/DD")]
+                        ],
+                        font: {
+                            family: "Roboto,sans-serif",
+                            color: "#ccc"
+                        }
+                    },
+                    yaxis: {
+                        ticks: 7,
+                        tickDecimals: 0,
+                        font: {
+                            color: "#ccc"
+                        }
+                    }
+            };
+
+        function initFlot() {
+            $.plot(chart, dataList, options);
+            chart.find('.legend table').css('width', 'auto')
+                .find('td').css('padding', 5);
+        }
+        initFlot();
+        $(window).on('resize', initFlot);
+
+        function showTooltip(x, y, contents) {
+            $('<div id="tooltip">' + contents + '</div>').css({
+                position: 'absolute',
+                display: 'none',
+                top: y - 40,
+                left: x - 55,
+                color: "#fff",
+                padding: '5px 10px',
+                'border-radius': '3px',
+                'background-color': 'rgba(0,0,0,0.6)'
+            }).appendTo("body").fadeIn(200);
+        }
+
+        var previousPoint = null;
+        chart.bind("plothover", function(event, pos, item) {
+            if (item) {
+                if (previousPoint != item.dataIndex) {
+                    previousPoint = item.dataIndex;
+
+                    $("#tooltip").remove();
+                    var x = item.datapoint[0].toFixed(0),
+                        y = item.datapoint[1].toFixed(0);
+
+                    var month = item.series.xaxis.ticks[item.dataIndex].label;
+
+                    showTooltip(item.pageX, item.pageY,
+                        item.series.label + " of " + month + ": " + y);
+                }
+            } else {
+                $("#tooltip").remove();
+                previousPoint = null;
+            }
+        });
+    }else{
+                alert("時間區段查無資料。");
+            }
+        });
+
+        
+    };
+    var startday = parseInt(((((Date.now() - (Date.now()) % 86400000) )-28800000)/1000 )- 6 * 86400);
+
+
+    // Pie Chart
+    function PieChart(fromtime , totime) {
+        
+        var chart = $("#flotPieChart");
+        // PieData
+
+        document.getElementById("report2_title").innerHTML="停車次數百分比-"+document.getElementById("select_site").options[document.getElementById("select_site").selectedIndex].text;
+        var site = document.getElementById("select_site").value;
+        getData("/REPORTAPI_2/"+ site +"/"+ fromtime +"/"+totime , function(responseText) {
+            responseJson = JSON.parse(responseText);
+            data = [];
+            if(responseJson.length!=0){
+                for(i in responseJson){
+                    data.push({
+                    label: responseJson[i]['Area'],
+                    data: responseJson[i]['ParkingTimes'],
+                    color: getRandomColor()
+                    })
+                }
+                    var options = {
+                    series: {
+                        pie: {
+                            innerRadius: 0.5,
+                            show: true
+                        }
+                    },
+                    grid: {
+                        hoverable: true
+                    },
+                    legend: {
+                        backgroundOpacity: 0,
+                        labelBoxBorderColor: "none"
+                    },
+                    tooltip: true,
+                    tooltipOpts: {
+                        content: "%p.0%, %s", // show percentages, rounding to 2 decimal places
+                        shifts: {
+                            x: 20,
+                            y: 0
+                        },
+                        defaultTheme: false
+                    }
+                };
+
+            }else{
+                alert("時間區段查無資料。");
+            }
+                if(data.length > 0){
+                    function initFlot() {
+                        $.plot(chart, data, options);
+                        chart.find('.legend table').css('width', 'auto')
+                            .find('td').css('padding', 5);
+                    }
+                    initFlot();
+                    $(window).on('resize', initFlot);
+                    }
+                });
+
+            
+    };
+    var now = parseInt(Date.now() / 1000);
+    var startofday = parseInt((((Date.now() - (Date.now()) % 86400000) )- 28800000)/1000);
+
+</script>
+
+<script>
+    // 報表查詢時間選擇器 datepicker
+          $(document).ready(function($) {
+           { //Date
+                var dateFormat = "mm/dd/yy",
+                  from = $( "#from" )
+                    .datepicker({
+                      defaultDate: "+1w",
+                      changeMonth: true,
+                      numberOfMonths: 3
+                    })
+                    .on( "change", function() {
+                      to.datepicker( "option", "minDate", getDate( this ) );
+                    })
+                    ,
+                  to = $( "#to" ).datepicker({
+                    defaultDate: "+1w",
+                    changeMonth: true,
+                    numberOfMonths: 3
+                  })
+                  .on( "change", function() {
+                    from.datepicker( "option", "maxDate", getDate( this ) );
+                  });
+
+                 function getDate( element ) {
+                      var date;
+                      try {
+                        date = $.datepicker.parseDate( dateFormat, element.value );
+                      } catch( error ) {
+                        date = null;
+                      }
+                      
+                      return date;
+                    }
+                }
+            $("#queryTime").click(function(){
+                var Form = new Date($("#from").val()).getTime()
+                var To = new Date($("#to").val()).getTime()
+                if(!isNaN(Form) && !isNaN(To)){
+                    
+                    
+                    var dataset = $('#RecordTable').find('tr:not(:nth-child(1)):not(:nth-child(2))');
+                    dataset.each(function(index) {
+                        item = $(this);
+                        item.hide();
+                    var forthdTd = item.find('td:nth-child(4)');
+                    var text = new Date(forthdTd.text()).getTime();
+                        if (text > Form && text < To){item.show();}
+                  });
+                }
+            });
+
+          
+            $('#select_INorOUT').change( function(){
+              var selection = $(this).val();
+              var dataset = $('#RecordTable').find('tr:not(:nth-child(1)):not(:nth-child(2))');
+              dataset.each(function(index) {
+                item = $(this);
+                item.hide();
+                    if (selection == ""){item.show();}
+                var firstTd = item.find('td:first-child');
+                var text = firstTd.text();
+                    if (text == selection){item.show();}
+              });
+            });
+            
+            $('#select_Area').change( function(){
+              var selection = $(this).val();
+              var dataset = $('#RecordTable').find('tr:not(:nth-child(1)):not(:nth-child(2))');
+              dataset.each(function(index) {
+                item = $(this);
+                item.hide();
+                    if (selection == ""){item.show();}
+                var secondTd = item.find('td:nth-child(2)');
+                var text = secondTd.text();
+                    if (text == selection){item.show();}
+              });
+            });
+            
+            $('#select_Place').change( function(){
+              var selection = $(this).val();
+              var dataset = $('#RecordTable').find('tr:not(:nth-child(1)):not(:nth-child(2))');
+              dataset.each(function(index) {
+                item = $(this);
+                item.hide();
+                    if (selection == ""){item.show();}
+                var thirdTd = item.find('td:nth-child(3)');
+                var text = thirdTd.text();
+                    if (text == selection){item.show();}
+              });
+            });
+
+            { //PieDate
+                var dateFormat = "mm/dd/yy",
+                  from = $( "#from_report2" )
+                    .datepicker({
+                      defaultDate: "+1w",
+                      changeMonth: true,
+                      numberOfMonths: 3
+                    })
+                    ,
+                  to = $( "#to_report2" ).datepicker({
+                    defaultDate: "+1w",
+                    changeMonth: true,
+                    numberOfMonths: 3
+                  })
+            }
+            { //LineDate
+                var dateFormat = "mm/dd/yy",
+                  from = $( "#from_report1" )
+                    .datepicker({
+                      defaultDate: "+1w",
+                      changeMonth: true,
+                      numberOfMonths: 3
+                    })
+                    
+                  
+            }
+                $("#queryTime").click(function(){
+                    var Form = new Date($("#from").val()).getTime()
+                    var To = new Date($("#to").val()).getTime()
+                    if(!isNaN(Form) && !isNaN(To)){
+                        PieChart(parseInt(Form /1000), parseInt(To /1000));
+                    }
+                });
+
+                 $("#queryTime_pie").click(function(){
+                    var Form = new Date($("#from_report2").val()).getTime()
+                    var To = new Date($("#to_report2").val()).getTime()
+                    if(!isNaN(Form) && !isNaN(To)){
+                        PieChart(parseInt(Form /1000), parseInt(To /1000));
+                    }
+                });
+                
+                $("#queryTime_linechart").click(function(){
+                    var Form = new Date($("#from_report1").val()).getTime()
+                    if(!isNaN(Form)){
+                        LineChart(parseInt(Form /1000));
+                    }
+                });
+             });
+     </script>
+</html>
